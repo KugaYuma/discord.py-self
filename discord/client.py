@@ -60,6 +60,7 @@ from .appinfo import AppInfo
 from .ui.view import View
 from .stage_instance import StageInstance
 from .threads import Thread
+from .sticker import GuildSticker, StandardSticker, StickerPack, _sticker_factory
 
 if TYPE_CHECKING:
     from .abc import SnowflakeTime, PrivateChannel, GuildChannel, Snowflake
@@ -276,6 +277,14 @@ class Client:
     def emojis(self) -> List[Emoji]:
         """List[:class:`.Emoji`]: The emojis that the connected client has."""
         return self._connection.emojis
+
+    @property
+    def stickers(self) -> List[GuildSticker]:
+        """List[:class:`GuildSticker`]: The stickers that the connected client has.
+
+        .. versionadded:: 2.0
+        """
+        return self._connection.stickers
 
     @property
     def cached_messages(self) -> Sequence[Message]:
@@ -783,6 +792,23 @@ class Client:
         """
         return self._connection.get_emoji(id)
 
+    def get_sticker(self, id: int) -> Optional[GuildSticker]:
+        """Returns a guild sticker with the given ID.
+
+        .. versionadded:: 2.0
+
+        .. note::
+
+            To retrieve standard stickers, use :meth:`.fetch_sticker`.
+            or :meth:`.fetch_premium_sticker_packs`.
+
+        Returns
+        --------
+        Optional[:class:`.GuildSticker`]
+            The sticker or ``None`` if not found.
+        """
+        return self._connection.get_sticker(id)
+
     def get_all_channels(self) -> Generator[GuildChannel, None, None]:
         """A generator that retrieves every :class:`.abc.GuildChannel` the client can 'access'.
 
@@ -973,7 +999,6 @@ class Client:
         *,
         activity: Optional[BaseActivity] = None,
         status: Optional[Status] = None,
-        afk: bool = False,
     ):
         """|coro|
 
@@ -987,6 +1012,9 @@ class Client:
             game = discord.Game("with the API")
             await client.change_presence(status=discord.Status.idle, activity=game)
 
+        .. versionchanged:: 2.0
+            Removed the ``afk`` keyword-only parameter.
+
         Parameters
         ----------
         activity: Optional[:class:`.BaseActivity`]
@@ -994,10 +1022,6 @@ class Client:
         status: Optional[:class:`.Status`]
             Indicates what status to change to. If ``None``, then
             :attr:`.Status.online` is used.
-        afk: Optional[:class:`bool`]
-            Indicates if you are going AFK. This allows the discord
-            client to know how to handle push notifications better
-            for you in case you are actually idle and not lying.
 
         Raises
         ------
@@ -1014,7 +1038,7 @@ class Client:
         else:
             status_str = str(status)
 
-        await self.ws.change_presence(activity=activity, status=status_str, afk=afk)
+        await self.ws.change_presence(activity=activity, status=status_str)
 
         for guild in self._connection.guilds:
             me = guild.me
@@ -1450,6 +1474,49 @@ class Client:
         """
         data = await self.http.get_webhook(webhook_id)
         return Webhook.from_state(data, state=self._connection)
+
+    async def fetch_sticker(self, sticker_id: int) -> Union[StandardSticker, GuildSticker]:
+        """|coro|
+
+        Retrieves a :class:`.Sticker` with the specified ID.
+
+        .. versionadded:: 2.0
+
+        Raises
+        --------
+        :exc:`.HTTPException`
+            Retrieving the sticker failed.
+        :exc:`.NotFound`
+            Invalid sticker ID.
+
+        Returns
+        --------
+        Union[:class:`.StandardSticker`, :class:`.GuildSticker`]
+            The sticker you requested.
+        """
+        data = await self.http.get_sticker(sticker_id)
+        cls, _ = _sticker_factory(data['type'])  # type: ignore
+        return cls(state=self._connection, data=data) # type: ignore
+
+    async def fetch_premium_sticker_packs(self) -> List[StickerPack]:
+        """|coro|
+
+        Retrieves all available premium sticker packs.
+
+        .. versionadded:: 2.0
+
+        Raises
+        -------
+        :exc:`.HTTPException`
+            Retrieving the sticker packs failed.
+
+        Returns
+        ---------
+        List[:class:`.StickerPack`]
+            All available premium sticker packs.
+        """
+        data = await self.http.list_premium_sticker_packs()
+        return [StickerPack(state=self._connection, data=pack) for pack in data['sticker_packs']]
 
     async def create_dm(self, user: Snowflake) -> DMChannel:
         """|coro|
