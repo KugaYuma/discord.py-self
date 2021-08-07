@@ -16,8 +16,8 @@ Fork Changes
 This has been moved to the `website <https://dolf.ml/discord.py-self>`_.
 
 | **Credits:**
-- `arandomnewaccount <https://www.reddit.com/user/obviouslymymain123/>`_ for Discord API help.
-
+| - `arandomnewaccount <https://www.reddit.com/user/obviouslymymain123/>`_ for Discord API help.
+|
 
 | **Note:**
 | Automating user accounts is against the Discord ToS. This library is a proof of concept and I do not recommend using it. Do so at your own risk.
@@ -33,7 +33,7 @@ Key Features
 Installing
 ----------
 
-**Python 3.5.3 or higher is required**
+**Python 3.8 or higher is required**
 
 To install the library without full voice support, you can just run the following command:
 
